@@ -1,0 +1,35 @@
+pipeline{
+    agent any
+    
+    environment{
+        PATH = "/opt/maven/bin:$PATH"
+    }
+    stages{
+        stage("Git Checkout"){
+            steps{
+                git credentialsId: '1b0e4e44-7d05-4e56-a36d-bc00f83d4fd6', url: 'https://github.com/anirudhnallala/myweb.git'
+            }
+        }
+        stage("Maven Build"){
+            steps{
+                sh "mvn clean package"
+                sh "mv target/*.war target/myweb.war"
+            }
+        }
+        stage("deploy-dev"){
+            steps{
+                sshagent(['e6bc3eca-bdf1-4b73-b4b2-2a570e2a01e8']) {
+                sh """
+                    scp -o StrictHostKeyChecking=no target/myweb.war  ec2-user@172.31.37.47:8080/home/ec2-user/apache-tomcat-9.0.89/webapps/
+                    
+                    ssh ec2-user@172.31.37.47 /home/ec2-user/apache-tomcat-9.0.89/bin/shutdown.sh
+                    
+                    ssh ec2-user@172.31.37.47 /home/ec2-user/apache-tomcat-9.0.89/bin/startup.sh
+                
+                """
+            }
+            
+            }
+        }
+    }
+}
